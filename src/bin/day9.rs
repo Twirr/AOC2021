@@ -45,8 +45,8 @@ fn main() -> io::Result<()> {
                     }
                     search_points = search(search_points.clone(),data.clone(),visited.clone());
                 }
-                //WHY DO WE HAVE DUPLICATES, AHH
-                basin_sizes.push(visited.into_iter().sorted().dedup().count() as u64);
+
+                basin_sizes.push(visited.len() as u64);
             } 
         }
     }
@@ -104,5 +104,5 @@ fn search(search_points: Vec<(usize,usize)>, data: Vec<Vec<u32>>, visited: Vec<(
         }
     }
 
-    new_search_points
+    new_search_points.into_iter().sorted().dedup().collect::<Vec<(usize,usize)>>()
 }
