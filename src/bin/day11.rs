@@ -39,25 +39,13 @@ fn step(data: &mut Vec<Vec<(u32,bool)>>) -> u32{
         *n += 1;
         *b = false;
     });
-
     let mut flashes = 0;
-    loop {
-        let mut flashed = false;
-        for i in 0..data.len(){
-            for j in 0..data[0].len(){              
-                let new_flashes = flash(data, i, j);
-                if new_flashes > 0{
-                    flashed = true;
-                    flashes += new_flashes;
-                }
-
-            }
-        }
-
-        if !flashed{
-            break;
+    for i in 0..data.len(){
+        for j in 0..data[0].len(){              
+            flashes += flash(data, i, j);
         }
     }
+
     flashes
 }
 fn flash(data: &mut Vec<Vec<(u32,bool)>>, i: usize, j: usize) -> u32{
