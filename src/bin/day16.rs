@@ -19,38 +19,20 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 fn parse_packet(data: &mut String,next_char: &mut usize, version_sum: &mut u64) -> u64{
-    parse_version(data, next_char, version_sum);
-    parse_type(data, next_char, version_sum)
-}
-fn parse_version(data: &mut String,next_char: &mut usize, version_sum: &mut u64){
-    let ver_bin = &data[*next_char..*next_char+3];
-    let ver_dec =  bin_to_dec(ver_bin);
-    *version_sum += ver_dec;
-    *next_char+=3;
-}
-
-fn parse_type(data: &mut String,next_char: &mut usize, version_sum: &mut u64) -> u64{
-    let type_bin = &data[*next_char..*next_char+3];
-    let type_dec = bin_to_dec(type_bin);
-    *next_char+=3;
+    *version_sum += read_int(data,next_char,3);
+    let type_dec = read_int(data,next_char,3);
     return match type_dec {
         4 => parse_literal(data,next_char),
         _ => {
             let mut literals = Vec::new();
 
-            let length_type_id = &data[*next_char..*next_char+1] == "0";
-            *next_char+=1;
-            if length_type_id{
-                let length_bin = &data[*next_char..*next_char+15];
-                *next_char+=15;
-                let packet_end = *next_char+bin_to_dec(length_bin) as usize;
+            if read_int(data, next_char, 1) == 0{
+                let packet_end = read_int(data, next_char, 15) as usize + *next_char;
                 while *next_char < packet_end{
                     literals.push(parse_packet(data, next_char, version_sum));
                 }
             }else{
-                let packet_amount_bin = &data[*next_char..*next_char+11];
-                *next_char+=11;
-                for _ in 0..bin_to_dec(packet_amount_bin){
+                for _ in 0..read_int(data, next_char, 11){
                     literals.push(parse_packet(data, next_char, version_sum));
                 }
             }
@@ -59,27 +41,9 @@ fn parse_type(data: &mut String,next_char: &mut usize, version_sum: &mut u64) ->
                 1 => literals.into_iter().product(),
                 2 => literals.into_iter().min().unwrap(),
                 3 => literals.into_iter().max().unwrap(),
-                5 => {
-                    if literals.get(0).unwrap() > literals.get(1).unwrap(){
-                        1
-                    }else{
-                        0
-                    }
-                },
-                6 => {
-                    if literals.get(0).unwrap() < literals.get(1).unwrap(){
-                        1
-                    }else{
-                        0
-                    }
-                }
-                7 => {
-                    if literals.get(0).unwrap() == literals.get(1).unwrap(){
-                        1
-                    }else{
-                        0
-                    }
-                }
+                5 => (literals.get(0).unwrap() > literals.get(1).unwrap()) as u64,
+                6 => (literals.get(0).unwrap() < literals.get(1).unwrap()) as u64,
+                7 => (literals.get(0).unwrap() == literals.get(1).unwrap()) as u64,
                 _ => 0
             }
         },
@@ -89,14 +53,19 @@ fn parse_literal(data: &mut String,next_char: &mut usize) -> u64{
     let mut last_literal = false;
     let mut literal = String::from("");
     while !last_literal{
-        last_literal = &data[*next_char..*next_char+1] == "0";
-        let part_value = &data[*next_char+1..*next_char+5];
-        literal.push_str(part_value.clone());
-        *next_char+=5;
+        last_literal = read_int(data, next_char, 1) == 0;
+        literal.push_str(&read_str(data, next_char, 4));
     }
     bin_to_dec(&literal)
 }
-
+fn read_int(data: &mut String,next_char: &mut usize, bits: usize) -> u64{
+    bin_to_dec(&read_str(data, next_char, bits))
+}
+fn read_str(data: &mut String,next_char: &mut usize, bits: usize) -> String{
+    let bin_value = &data[*next_char..*next_char+bits];
+    *next_char+=bits;
+    String::from(bin_value)
+}
 
 fn bin_to_dec(bin: &str) -> u64{
     return u64::from_str_radix(bin, 2).unwrap();
